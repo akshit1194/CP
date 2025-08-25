@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 
 const CharterPartyRegister = () => {
-  const [userType, setUserType] = useState('charter');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +16,8 @@ const CharterPartyRegister = () => {
   const rendererRef = useRef(null);
   const animationRef = useRef(null);
   const seaAnimalsRef = useRef([]);
+  const navigate = useNavigate();
+  const userType = 'broker'; // Fixed to broker
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -466,17 +469,18 @@ const CharterPartyRegister = () => {
     if (validateForm()) {
       console.log('Registration:', { userType, name, email, password });
       // Add your registration logic here
+      navigate('/login');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-600 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-maritime relative overflow-hidden">
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(50)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-2 h-2 bg-white rounded-full opacity-20 animate-pulse"
+            className="absolute w-2 h-2 bg-sail-white rounded-full opacity-20 animate-pulse"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -494,8 +498,8 @@ const CharterPartyRegister = () => {
             {/* Loading overlay */}
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20 rounded-lg">
-                <div className="text-center text-white">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <div className="text-center text-sail-white">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sail-white mx-auto mb-4"></div>
                   <p className="text-lg font-semibold">Loading Maritime Scene...</p>
                 </div>
               </div>
@@ -503,57 +507,26 @@ const CharterPartyRegister = () => {
 
             {/* Logo/Header */}
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-white mb-2 tracking-wide">
+              <h1 className="text-4xl font-bold text-sail-white mb-2 tracking-wide">
                 ⚓ Charter Party
               </h1>
-              <p className="text-cyan-200 text-lg">Begin Your Maritime Journey</p>
+              <p className="text-ocean-foam text-lg">Broker Registration</p>
             </div>
 
             <div className="space-y-6">
-              {/* User Type Selection */}
-              <div>
-                <label className="block text-cyan-100 font-semibold mb-3">
-                  Account Type
-                </label>
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setUserType('charter')}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
-                      userType === 'charter'
-                        ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-white/10 text-cyan-200 hover:bg-white/20'
-                    }`}
-                  >
-                    🚢 Charter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setUserType('ship-owner')}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
-                      userType === 'ship-owner'
-                        ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30'
-                        : 'bg-white/10 text-cyan-200 hover:bg-white/20'
-                    }`}
-                  >
-                    ⚓ Ship Owner
-                  </button>
-                </div>
-              </div>
-
               {/* Name Input */}
               <div>
-                <label className="block text-cyan-100 font-semibold mb-2">
+                <label className="block text-ocean-foam font-semibold mb-2">
                   Full Name
                 </label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-white placeholder-cyan-300 focus:outline-none focus:bg-white/20 transition-all duration-300 ${
-                    errors.name ? 'border-red-400' : 'border-cyan-300/30 focus:border-cyan-400'
+                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                    errors.name ? 'border-red-400' : 'border-border focus:border-ocean-surface'
                   }`}
-                  placeholder="Captain John Smith"
+                  placeholder="Broker John Smith"
                   required
                 />
                 {errors.name && <p className="text-red-300 text-sm mt-1">{errors.name}</p>}
@@ -561,17 +534,17 @@ const CharterPartyRegister = () => {
 
               {/* Email Input */}
               <div>
-                <label className="block text-cyan-100 font-semibold mb-2">
+                <label className="block text-ocean-foam font-semibold mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-white placeholder-cyan-300 focus:outline-none focus:bg-white/20 transition-all duration-300 ${
-                    errors.email ? 'border-red-400' : 'border-cyan-300/30 focus:border-cyan-400'
+                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                    errors.email ? 'border-red-400' : 'border-border focus:border-ocean-surface'
                   }`}
-                  placeholder="captain@example.com"
+                  placeholder="broker@example.com"
                   required
                 />
                 {errors.email && <p className="text-red-300 text-sm mt-1">{errors.email}</p>}
@@ -579,15 +552,15 @@ const CharterPartyRegister = () => {
 
               {/* Password Input */}
               <div>
-                <label className="block text-cyan-100 font-semibold mb-2">
+                <label className="block text-ocean-foam font-semibold mb-2">
                   Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-white placeholder-cyan-300 focus:outline-none focus:bg-white/20 transition-all duration-300 ${
-                    errors.password ? 'border-red-400' : 'border-cyan-300/30 focus:border-cyan-400'
+                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                    errors.password ? 'border-red-400' : 'border-border focus:border-ocean-surface'
                   }`}
                   placeholder="Create a strong password"
                   required
@@ -597,15 +570,15 @@ const CharterPartyRegister = () => {
 
               {/* Confirm Password Input */}
               <div>
-                <label className="block text-cyan-100 font-semibold mb-2">
+                <label className="block text-ocean-foam font-semibold mb-2">
                   Confirm Password
                 </label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-white placeholder-cyan-300 focus:outline-none focus:bg-white/20 transition-all duration-300 ${
-                    errors.confirmPassword ? 'border-red-400' : 'border-cyan-300/30 focus:border-cyan-400'
+                  className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                    errors.confirmPassword ? 'border-red-400' : 'border-border focus:border-ocean-surface'
                   }`}
                   placeholder="Confirm your password"
                   required
@@ -616,20 +589,20 @@ const CharterPartyRegister = () => {
               {/* Register Button */}
               <button
                 onClick={handleRegister}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-cyan-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-300 shadow-lg shadow-cyan-500/30"
+                className="w-full bg-gradient-ocean text-sail-white py-3 px-6 rounded-lg font-semibold hover:bg-ocean-surface transform hover:scale-105 transition-all duration-300 shadow-lg shadow-ocean"
               >
                 Join the Fleet - Register 🚢
               </button>
 
               {/* Terms and Conditions */}
-              <div className="text-center pt-4 border-t border-cyan-300/20">
-                <p className="text-cyan-200 text-sm">
+              <div className="text-center pt-4 border-t border-border">
+                <p className="text-ocean-foam text-sm">
                   By registering, you agree to our{' '}
-                  <a href="#" className="text-cyan-300 hover:text-cyan-100 underline">
+                  <a href="#" className="text-ocean-foam hover:text-sail-white underline">
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="#" className="text-cyan-300 hover:text-cyan-100 underline">
+                  <a href="#" className="text-ocean-foam hover:text-sail-white underline">
                     Privacy Policy
                   </a>
                 </p>
@@ -637,13 +610,13 @@ const CharterPartyRegister = () => {
 
               {/* Already have an account */}
               <div className="text-center">
-                <p className="text-cyan-200 mb-3">Already have an account?</p>
-                <a
-                  href="/login"
-                  className="bg-white/10 text-cyan-100 py-2 px-6 rounded-lg font-medium hover:bg-white/20 transition-all duration-300 border border-cyan-300/30 inline-block"
+                <p className="text-ocean-foam mb-3">Already have an account?</p>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="bg-white/10 text-ocean-foam py-2 px-6 rounded-lg font-medium hover:bg-white/20 transition-all duration-300 border border-border"
                 >
                   Navigate to Login ⛵
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -657,21 +630,21 @@ const CharterPartyRegister = () => {
           <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-black/10 pointer-events-none" />
           
           {/* Floating UI elements */}
-          <div className="absolute top-8 right-8 text-white/80">
+          <div className="absolute top-8 right-8 text-sail-white/80">
             <div className="text-right">
               <div className="text-sm font-medium">Current Weather</div>
               <div className="text-xl">⛅ Fair Winds</div>
             </div>
           </div>
           
-          <div className="absolute bottom-8 right-8 text-white/80">
+          <div className="absolute bottom-8 right-8 text-sail-white/80">
             <div className="text-right">
               <div className="text-sm font-medium">Sea Condition</div>
               <div className="text-xl">🌊 Calm Seas</div>
             </div>
           </div>
 
-          <div className="absolute bottom-8 left-8 text-white/80">
+          <div className="absolute bottom-8 left-8 text-sail-white/80">
             <div className="text-left">
               <div className="text-sm font-medium">Marine Life</div>
               <div className="text-xl">🐬 Dolphins & Fish</div>
@@ -685,7 +658,7 @@ const CharterPartyRegister = () => {
         <svg
           viewBox="0 0 1200 120"
           preserveAspectRatio="none"
-          className="w-full h-16 fill-current text-cyan-600/30"
+          className="w-full h-16 fill-current text-ocean-surface/30"
         >
           <path d="M0,0V60C240,120,480,0,720,60C960,120,1200,0,1200,60V0Z">
             <animate

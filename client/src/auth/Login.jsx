@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 
 const CharterPartyLogin = () => {
-  const [userType, setUserType] = useState('charter');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState({});
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const shipRef = useRef(null);
@@ -16,6 +16,7 @@ const CharterPartyLogin = () => {
   const animationRef = useRef(null);
   const seaAnimalsRef = useRef([]);
   const navigate = useNavigate();
+  const userType = 'broker'; // Fixed to broker
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -434,9 +435,29 @@ const CharterPartyLogin = () => {
     };
   }, []);
 
+  const validateLogin = () => {
+    const newErrors = {};
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    
+    if (!password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleLogin = () => {
-    console.log('Login:', { userType, email, password });
-    // Add your login logic here
+    if (validateLogin()) {
+      console.log('Login:', { userType, email, password });
+      // Add actual authentication logic here (e.g., API call)
+      navigate('/fixture');
+    }
   };
 
   const handleSignup = () => {
@@ -444,6 +465,14 @@ const CharterPartyLogin = () => {
   };
 
   const handleForgotPassword = () => {
+    if (!email.trim()) {
+      setErrors({ email: 'Email is required' });
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setErrors({ email: 'Email is invalid' });
+      return;
+    }
     console.log('Forgot password for:', email);
     // Add your forgot password logic here
   };
@@ -485,42 +514,11 @@ const CharterPartyLogin = () => {
               <h1 className="text-4xl font-bold text-sail-white mb-2 tracking-wide">
                 ⚓ Charter Party
               </h1>
-              <p className="text-ocean-foam text-lg">Navigate Your Maritime Journey</p>
+              <p className="text-ocean-foam text-lg">Broker Login</p>
             </div>
 
             {!showForgotPassword ? (
               <div className="space-y-6">
-                {/* User Type Selection */}
-                <div>
-                  <label className="block text-ocean-foam font-semibold mb-3">
-                    Account Type
-                  </label>
-                  <div className="flex space-x-4">
-                    <button
-                      type="button"
-                      onClick={() => setUserType('charter')}
-                      className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
-                        userType === 'charter'
-                          ? 'bg-ocean-surface text-sail-white shadow-lg shadow-ocean'
-                          : 'bg-white/10 text-ocean-foam hover:bg-white/20'
-                      }`}
-                    >
-                      🚢 Charter
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setUserType('ship-owner')}
-                      className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 ${
-                        userType === 'ship-owner'
-                          ? 'bg-ocean-surface text-sail-white shadow-lg shadow-ocean'
-                          : 'bg-white/10 text-ocean-foam hover:bg-white/20'
-                      }`}
-                    >
-                      ⚓ Ship Owner
-                    </button>
-                  </div>
-                </div>
-
                 {/* Email Input */}
                 <div>
                   <label className="block text-ocean-foam font-semibold mb-2">
@@ -530,10 +528,13 @@ const CharterPartyLogin = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-input rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:border-ocean-surface focus:bg-white/20 transition-all duration-300"
-                    placeholder="captain@example.com"
+                    className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                      errors.email ? 'border-red-400' : 'border-border focus:border-ocean-surface'
+                    }`}
+                    placeholder="broker@example.com"
                     required
                   />
+                  {errors.email && <p className="text-red-300 text-sm mt-1">{errors.email}</p>}
                 </div>
 
                 {/* Password Input */}
@@ -545,10 +546,13 @@ const CharterPartyLogin = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-input rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:border-ocean-surface focus:bg-white/20 transition-all duration-300"
+                    className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                      errors.password ? 'border-red-400' : 'border-border focus:border-ocean-surface'
+                    }`}
                     placeholder="Enter your password"
                     required
                   />
+                  {errors.password && <p className="text-red-300 text-sm mt-1">{errors.password}</p>}
                 </div>
 
                 {/* Login Button */}
@@ -593,10 +597,13 @@ const CharterPartyLogin = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-input rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:border-ocean-surface focus:bg-white/20 transition-all duration-300"
+                    className={`w-full px-4 py-3 bg-white/10 border rounded-lg text-sail-white placeholder-ocean-foam focus:outline-none focus:bg-white/20 transition-all duration-300 ${
+                      errors.email ? 'border-red-400' : 'border-border focus:border-ocean-surface'
+                    }`}
                     placeholder="Enter your email"
                     required
                   />
+                  {errors.email && <p className="text-red-300 text-sm mt-1">{errors.email}</p>}
                 </div>
                 <button
                   onClick={handleForgotPassword}
