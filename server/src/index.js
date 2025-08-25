@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import authRoutes from './routes/authRoutes.js';
+import { requireAuth } from './middleware/authMiddleware.js';
 
 // Define __filename and __dirname before using them
 const __filename = fileURLToPath(import.meta.url);
@@ -41,12 +43,14 @@ const fixtureSchema = new mongoose.Schema(
   {
     shipperName: String,
     chartererName: String,
+  charterType: { type: String, enum: ['Voyage', 'Time', 'Bareboat'], default: 'Voyage' },
     vesselName: String,
     dwt: Number,
     builtYear: Number,
     flag: String,
     vesselClass: String,
     imoNumber: String,
+  cargoNature: { type: String, enum: ['BulkDry', 'LiquidTanker', 'HeavyLift'], default: 'BulkDry' },
     cargoType: String,
     cargoQtyMt: Number,
     cargoPctTolerance: Number,
@@ -75,6 +79,9 @@ const fixtureSchema = new mongoose.Schema(
     specialClauses: [String],
     otherClauses: [String],
     recap: String, // New field to store recap text
+  cpBaseForm: String,
+  cpSuggested: String,
+  cpReason: String,
   },
   { timestamps: true }
 );
@@ -101,6 +108,7 @@ function recapFromDoc(d) {
   const lines = [
     'Fixture Recap',
     '',
+  ...(d.charterType || d.cargoNature ? [`Charter Type: ${d.charterType || ''} | Cargo Category: ${d.cargoNature || ''}`] : []),
     ...(d.shipperName || d.chartererName ? [`Parties: Shipper ${d.shipperName || ''}; Charterer ${d.chartererName || ''}`] : []),
     `Vessel: ${d.vesselName || ''} – ${fmtNumber(d.dwt)} DWT – Built ${d.builtYear || ''} – ${d.flag || ''} Flag – Class ${d.vesselClass || ''}`,
     ...(d.imoNumber ? [`IMO: ${d.imoNumber}`] : []),
@@ -121,6 +129,8 @@ function recapFromDoc(d) {
     ...(d.bunkerType ? [`Bunkers: ${d.bunkerType}`] : []),
     ...(d.costResponsibility ? [`Costs: ${d.costResponsibility}`] : []),
     ...(d.tradingLimits ? [`Trading Limits: ${d.tradingLimits}`] : []),
+  '',
+  ...(d.cpBaseForm || d.cpSuggested || d.cpReason ? [`Base CP Template: ${d.cpBaseForm || d.cpSuggested || ''}${d.cpReason ? ` — ${d.cpReason}` : ''}`] : []),
     '',
     'Other terms:',
     ...([
@@ -140,6 +150,58 @@ function recapFromDoc(d) {
 const Fixture = mongoose.model('Fixture', fixtureSchema);
 
 app.get('/api/health', (_, res) => res.json({ ok: true }));
+
+// Auth routes
+app.use('/api', authRoutes);
+
+// Example protected route
+app.get('/api/me', requireAuth, (req, res) => {
+  res.json({ user: req.user });
+});
+
+// n8n webhook forwarder to avoid browser CORS
+async function doFetch(url, options) {
+  if (typeof fetch === 'function') return fetch(url, options);
+  const mod = await import('node-fetch');
+  return mod.default(url, options);
+}
+
+async function forwardToN8n(url, req, res, authHeaderEnvKey = 'N8N_WEBHOOK_AUTH_HEADER') {
+  try {
+    const headers = { 'content-type': 'application/json' };
+    const authVal = process.env[authHeaderEnvKey];
+    if (authVal) headers['authorization'] = authVal;
+    const r = await doFetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(req.body || {}),
+    });
+    const contentType = r.headers.get('content-type') || 'application/octet-stream';
+    const contentDisposition = r.headers.get('content-disposition');
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.status(r.status).setHeader('Content-Type', contentType);
+    if (contentDisposition) res.setHeader('Content-Disposition', contentDisposition);
+    res.setHeader('Content-Length', buf.length);
+    res.send(buf);
+  } catch (err) {
+    console.error('n8n forward error:', err.message);
+    res.status(502).json({ error: 'Failed to forward to n8n' });
+  }
+}
+
+// Generic forwarder (legacy)
+app.post('/api/n8n/webhook', async (req, res) => {
+  const url = process.env.N8N_WEBHOOK_URL;
+  if (!url) return res.status(500).json({ error: 'N8N_WEBHOOK_URL is not configured on server' });
+  await forwardToN8n(url, req, res, 'N8N_WEBHOOK_AUTH_HEADER');
+});
+
+// CP generation forwarder (Wait for Response from n8n)
+app.post('/api/generate-cp', async (req, res) => {
+  const url = process.env.N8N_CP_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
+  if (!url) return res.status(500).json({ error: 'N8N_CP_WEBHOOK_URL is not configured on server' });
+  await forwardToN8n(url, req, res, 'N8N_CP_WEBHOOK_AUTH_HEADER');
+});
 
 app.post('/api/fixtures', async (req, res) => {
   try {

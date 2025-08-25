@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
 
@@ -21,6 +22,7 @@ export default function Login() {
     email: '',
     password: '',
   });
+  const navigate = useNavigate();
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -31,7 +33,6 @@ export default function Login() {
     e.preventDefault();
     try {
       console.log('Sign In payload:', form); // Debug payload
-      // Placeholder fetch call (backend not implemented)
       const res = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -39,7 +40,10 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('Sign In successful!'); // Placeholder success message
+  // Persist token & user
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  navigate('/fixture');
       } else {
         console.error('Server response:', data);
         alert('Error: ' + (data.error || 'Unknown server error'));
@@ -54,7 +58,6 @@ export default function Login() {
     e.preventDefault();
     try {
       console.log('Create Account payload:', form); // Debug payload
-      // Placeholder fetch call (backend not implemented)
       const res = await fetch(`${API_BASE}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +65,9 @@ export default function Login() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('Account creation initiated!'); // Placeholder success message
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  navigate('/fixture');
       } else {
         console.error('Server response:', data);
         alert('Error: ' + (data.error || 'Unknown server error'));

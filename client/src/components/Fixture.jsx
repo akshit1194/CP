@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+const N8N_FORWARD = import.meta.env.VITE_N8N_FORWARD === 'true';
 
 function Label({ children }) {
   return <div className="label">{children}</div>;
@@ -19,12 +20,14 @@ export default function Fixture() {
   const [form, setForm] = useState({
     shipperName: '',
     chartererName: '',
+    charterType: 'Voyage',
     vesselName: '',
     dwt: '',
     builtYear: '',
     flag: '',
     vesselClass: '',
     imoNumber: '',
+    cargoNature: 'BulkDry',
     cargoType: '',
     cargoQtyMt: '',
     cargoPctTolerance: '',
@@ -52,7 +55,46 @@ export default function Fixture() {
     tradingLimits: '',
     specialClauses: '',
     otherClauses: `1 Safe Port / 1 Safe Berth each, Always Accessible\nNOR to be tendered whether in berth or not (WIBON)\nWeather Working Days (WWD)`,
+    cpBaseForm: '',
   });
+
+  // Track whether broker manually chose CP to avoid auto-overwrite
+  const [cpTouched, setCpTouched] = useState(false);
+
+  // Suggest CP template based on rules
+  const { cpSuggested, cpReason } = useMemo(() => {
+    const t = form.charterType;
+    const n = form.cargoNature;
+    let name = 'GENCON';
+    let reason = 'Fallback to GENCON (general dry bulk voyage).';
+    if (n === 'HeavyLift') {
+      name = 'HEAVYCON';
+      reason = 'Heavy lift/project cargo.';
+    } else if (t === 'Bareboat') {
+      name = 'BARECON';
+      reason = 'Bareboat charter (demise).';
+    } else if (t === 'Voyage' && n === 'BulkDry') {
+      name = 'GENCON';
+      reason = 'Voyage + dry bulk cargo.';
+    } else if (t === 'Voyage' && n === 'LiquidTanker') {
+      name = 'ASBATANKVOY';
+      reason = 'Voyage + liquid/tanker cargo.';
+    } else if (t === 'Time' && n === 'BulkDry') {
+      name = 'NYPE';
+      reason = 'Time charter + dry bulk.';
+    } else if (t === 'Time' && n === 'LiquidTanker') {
+      name = 'SHELLTIME';
+      reason = 'Time charter + tanker.';
+    }
+    return { cpSuggested: name, cpReason: reason };
+  }, [form.charterType, form.cargoNature]);
+
+  // Auto-set cpBaseForm to suggestion unless broker already changed it
+  useEffect(() => {
+    if (!cpTouched) {
+      setForm((prev) => ({ ...prev, cpBaseForm: cpSuggested }));
+    }
+  }, [cpSuggested, cpTouched]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -71,6 +113,7 @@ export default function Fixture() {
     const lines = [
       'Fixture Recap',
       '',
+    `Charter Type: ${form.charterType || ''} | Cargo Category: ${form.cargoNature || ''}`,
       form.shipperName || form.chartererName ? `Parties: Shipper ${form.shipperName}; Charterer ${form.chartererName}` : null,
       `Vessel: ${form.vesselName} – ${num(form.dwt)} DWT – Built ${form.builtYear} – ${form.flag} Flag – Class ${form.vesselClass}`,
       form.imoNumber ? `IMO: ${form.imoNumber}` : null,
@@ -91,17 +134,21 @@ export default function Fixture() {
       form.bunkerType ? `Bunkers: ${form.bunkerType}` : null,
       form.costResponsibility ? `Costs: ${form.costResponsibility}` : null,
       form.tradingLimits ? `Trading Limits: ${form.tradingLimits}` : null,
+    '',
+    `Base CP Template: ${form.cpBaseForm || cpSuggested} — ${cpReason}`,
       '',
       'Other terms:',
     ];
     const clauses = [...(form.specialClauses?.split(/\n+/).filter(Boolean) || []), ...(form.otherClauses?.split(/\n+/).filter(Boolean) || [])].map((c) => `- ${c}`);
     return lines.filter(Boolean).concat(clauses).join('\n');
-  }, [form]);
+  }, [form, cpSuggested, cpReason]);
 
   const handleSave = async () => {
     try {
       const payload = {
         ...form,
+  cpSuggested,
+  cpReason,
         dwt: form.dwt ? Number(form.dwt) : undefined,
         builtYear: form.builtYear ? Number(form.builtYear) : undefined,
         cargoQtyMt: form.cargoQtyMt ? Number(form.cargoQtyMt) : undefined,
@@ -127,6 +174,18 @@ export default function Fixture() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Optionally forward to n8n webhook via server proxy
+        if (N8N_FORWARD) {
+          try {
+            await fetch(`${API_BASE}/api/n8n/webhook`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fixtureId: data._id, payload }),
+            });
+          } catch (e) {
+            console.warn('n8n forward failed:', e.message);
+          }
+        }
         alert('Saved! ID: ' + data._id);
       } else {
         console.error('Server response:', data);
@@ -148,10 +207,65 @@ export default function Fixture() {
     }
   };
 
+  const handleGenerateCP = async () => {
+    try {
+      const payload = {
+        ...form,
+        cpSuggested,
+        cpReason,
+        recap,
+      };
+      const res = await fetch(`${API_BASE}/api/generate-cp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const contentType = res.headers.get('content-type') || 'application/octet-stream';
+      const disposition = res.headers.get('content-disposition') || '';
+      const blob = await res.blob();
+      if (!res.ok) {
+        const text = await blob.text();
+        throw new Error(text || 'Failed to generate CP');
+      }
+      // Determine filename
+      let filename = 'CharterParty.pdf';
+      const match = /filename="?([^";]+)"?/i.exec(disposition);
+      if (match && match[1]) filename = match[1];
+      // Download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Generate CP error:', err.message);
+      alert('Error: ' + err.message);
+    }
+  };
+
   return (
     <div className="container">
       <div className="panel">
         <h1 className="h1">Fixture Input</h1>
+        <div className="row">
+          <Field label="Charter Type">
+            <select name="charterType" value={form.charterType} onChange={onChange}>
+              <option value="Voyage">Voyage</option>
+              <option value="Time">Time</option>
+              <option value="Bareboat">Bareboat</option>
+            </select>
+          </Field>
+          <Field label="Cargo Category">
+            <select name="cargoNature" value={form.cargoNature} onChange={onChange}>
+              <option value="BulkDry">Bulk Dry</option>
+              <option value="LiquidTanker">Liquid/Tanker</option>
+              <option value="HeavyLift">Heavy Lift</option>
+            </select>
+          </Field>
+        </div>
         <div className="row">
           <Field label="Shipper Name">
             <input className="input" name="shipperName" value={form.shipperName} onChange={onChange} placeholder="ABC Shipping" />
@@ -159,6 +273,29 @@ export default function Fixture() {
           <Field label="Charterer Name">
             <input className="input" name="chartererName" value={form.chartererName} onChange={onChange} placeholder="XYZ Trading" />
           </Field>
+        </div>
+        <div className="row">
+          <Field label="Base CP Template (suggested)">
+            <select
+              name="cpBaseForm"
+              value={form.cpBaseForm || cpSuggested}
+              onChange={(e) => {
+                setCpTouched(true);
+                onChange(e);
+              }}
+            >
+              <option value="GENCON">GENCON</option>
+              <option value="ASBATANKVOY">ASBATANKVOY</option>
+              <option value="NYPE">NYPE</option>
+              <option value="SHELLTIME">SHELLTIME</option>
+              <option value="BARECON">BARECON</option>
+              <option value="HEAVYCON">HEAVYCON</option>
+            </select>
+          </Field>
+          <div>
+            <Label>Why suggested</Label>
+            <div className="input" style={{ padding: 10 }}>{cpReason}</div>
+          </div>
         </div>
         <div className="row">
           <Field label="Vessel Name">
@@ -305,6 +442,9 @@ export default function Fixture() {
           </button>
           <button className="btn" onClick={handleSave}>
             Save
+          </button>
+          <button className="btn" onClick={handleGenerateCP}>
+            Generate CP
           </button>
         </div>
       </div>
