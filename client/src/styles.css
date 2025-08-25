@@ -1,3 +1,151 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Base Colors */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 200 98% 39%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 200 98% 39%;
+  
+  /* Maritime Specific Colors */
+  --ocean-deep: 200 100% 20%;
+  --ocean-surface: 200 98% 39%;
+  --ocean-foam: 194 87% 85%;
+  --maritime-gold: 43 74% 66%;
+  --ship-hull: 216 50% 16%;
+  --deck-wood: 30 45% 35%;
+  --sail-white: 0 0% 98%;
+  
+  /* Gradients */
+  --gradient-ocean: linear-gradient(135deg, hsl(200 100% 20%), hsl(200 98% 39%));
+  --gradient-sky: linear-gradient(180deg, hsl(200 30% 85%), hsl(200 40% 70%));
+  --gradient-maritime: linear-gradient(135deg, hsl(217 91% 15%), hsl(200 98% 39%));
+  --gradient-gold: linear-gradient(135deg, hsl(43 74% 66%), hsl(38 92% 75%));
+  
+  /* Shadows */
+  --shadow-ocean: 0 10px 40px -10px hsl(200 98% 39% / 0.4);
+  --shadow-ship: 0 20px 50px -15px hsl(216 50% 16% / 0.5);
+  --shadow-elegant: 0 4px 20px -2px hsl(200 98% 39% / 0.25);
+  
+  --radius: 0.75rem;
+  
+  /* Sidebar Colors */
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-primary: 240 5.9% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 4.8% 95.9%;
+  --sidebar-accent-foreground: 240 5.9% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
+}
+
+.dark {
+  /* Dark Maritime Theme */
+  --background: 217 91% 8%;
+  --foreground: 194 87% 85%;
+  --card: 217 91% 12%;
+  --card-foreground: 194 87% 85%;
+  --popover: 217 91% 12%;
+  --popover-foreground: 194 87% 85%;
+  --primary: 200 98% 50%;
+  --primary-foreground: 217 91% 8%;
+  --secondary: 216 50% 20%;
+  --secondary-foreground: 194 87% 85%;
+  --accent: 43 74% 70%;
+  --accent-foreground: 217 91% 8%;
+  --muted: 216 50% 16%;
+  --muted-foreground: 194 50% 65%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 194 87% 85%;
+  --border: 216 50% 16%;
+  --input: 216 50% 16%;
+  --ring: 200 98% 50%;
+  
+  /* Dark Maritime Colors */
+  --ocean-deep: 200 100% 10%;
+  --ocean-surface: 200 98% 30%;
+  --ocean-foam: 194 50% 70%;
+  --sidebar-background: 240 5.9% 10%;
+  --sidebar-foreground: 240 4.8% 95.9%;
+  --sidebar-primary: 224.3 76.3% 48%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 240 4.8% 95.9%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 217.2 91.2% 59.8%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(5deg);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-wave {
+  animation: wave 2s ease-in-out infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.7);
+}
