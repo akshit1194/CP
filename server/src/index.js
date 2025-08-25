@@ -6,10 +6,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
-
+// Define __filename and __dirname before using them
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env file from the server root directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 app.use(express.json());
@@ -18,67 +20,61 @@ app.use(morgan('dev'));
 const allowedOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 app.use(cors({ origin: allowedOrigin }));
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fixture_recaps';
-await mongoose.connect(MONGODB_URI);
+const MONGODB_URI = process.env.MONGODB_URI;
+
+const connectDB = async () => {
+  try {
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI is not defined in .env file');
+    }
+    await mongoose.connect(MONGODB_URI);
+    console.log(`MongoDB connected to ${MONGODB_URI}`);
+  } catch (error) {
+    console.error('MongoDB connection error:', error.message);
+    process.exit(1);
+  }
+};
+
+connectDB();
 
 const fixtureSchema = new mongoose.Schema(
   {
-    // Parties
     shipperName: String,
     chartererName: String,
-
-    // Vessel
     vesselName: String,
     dwt: Number,
     builtYear: Number,
     flag: String,
     vesselClass: String,
     imoNumber: String,
-
-    // Cargo & Ports
     cargoType: String,
     cargoQtyMt: Number,
     cargoPctTolerance: Number,
     stowageFactor: String,
     loadPorts: [String],
     dischargePorts: [String],
-
-    // Dates
     laycanStart: Date,
     laycanEnd: Date,
     cancelingDate: Date,
-
-    // Freight
     freightType: { type: String, enum: ['per_mt', 'lumpsum'], default: 'per_mt' },
     freightAmount: Number,
     freightTerms: String,
     paymentTerms: String,
-
-    // Laytime / ops
     loadingRate: String,
     dischargeRate: String,
     loadingTerms: String,
     dischargeTerms: String,
-
-    // Dem/des
     demurragePerDay: Number,
     despatchPerDay: Number,
-
-    // Commercial
     commissionPct: Number,
-
-    // Law
     arbitrationPlace: String,
     governingLaw: String,
-
-    // Other
     bunkerType: String,
     costResponsibility: String,
     tradingLimits: String,
     specialClauses: [String],
     otherClauses: [String],
-
-    // timestamps
+    recap: String, // New field to store recap text
   },
   { timestamps: true }
 );
@@ -97,9 +93,10 @@ function dateRangeStr(start, end) {
 
 function recapFromDoc(d) {
   const qty = d.cargoQtyMt ? `${fmtNumber(d.cargoQtyMt)} MT${d.cargoPctTolerance ? ` (+/- ${fmtNumber(d.cargoPctTolerance)}%)` : ''}` : '';
-  const freight = d.freightType === 'lumpsum'
-    ? `USD ${fmtNumber(d.freightAmount)} lumpsum${d.freightTerms ? `, ${d.freightTerms}` : ''}`
-    : `USD ${fmtNumber(d.freightAmount)} per MT${d.freightTerms ? `, ${d.freightTerms}` : ''}`;
+  const freight =
+    d.freightType === 'lumpsum'
+      ? `USD ${fmtNumber(d.freightAmount)} lumpsum${d.freightTerms ? `, ${d.freightTerms}` : ''}`
+      : `USD ${fmtNumber(d.freightAmount)} per MT${d.freightTerms ? `, ${d.freightTerms}` : ''}`;
 
   const lines = [
     'Fixture Recap',
@@ -149,13 +146,19 @@ app.post('/api/fixtures', async (req, res) => {
     const fixture = await Fixture.create(req.body);
     res.status(201).json(fixture);
   } catch (err) {
+    console.error('Error creating fixture:', err.message);
     res.status(400).json({ error: err.message });
   }
 });
 
 app.get('/api/fixtures', async (req, res) => {
-  const fixtures = await Fixture.find().sort({ createdAt: -1 }).lean();
-  res.json(fixtures);
+  try {
+    const fixtures = await Fixture.find().sort({ createdAt: -1 }).lean();
+    res.json(fixtures);
+  } catch (err) {
+    console.error('Error fetching fixtures:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 app.get('/api/fixtures/:id', async (req, res) => {
@@ -164,6 +167,7 @@ app.get('/api/fixtures/:id', async (req, res) => {
     if (!fixture) return res.status(404).json({ error: 'Not found' });
     res.json(fixture);
   } catch (err) {
+    console.error('Error fetching fixture:', err.message);
     res.status(400).json({ error: 'Invalid id' });
   }
 });
@@ -172,13 +176,13 @@ app.get('/api/fixtures/:id/recap', async (req, res) => {
   try {
     const fixture = await Fixture.findById(req.params.id).lean();
     if (!fixture) return res.status(404).send('Not found');
-    res.type('text/plain').send(recapFromDoc(fixture));
+    res.type('text/plain').send(fixture.recap || recapFromDoc(fixture)); // Use stored recap if available
   } catch (err) {
+    console.error('Error generating recap:', err.message);
     res.status(400).send('Invalid id');
   }
 });
 
-// In production, serve frontend build
 if (process.env.NODE_ENV === 'production') {
   const clientDist = path.resolve(__dirname, '../../client/dist');
   app.use(express.static(clientDist));
@@ -187,5 +191,5 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
